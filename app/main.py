@@ -1,11 +1,14 @@
+import asyncio
 import os
 import time
 from typing import Optional
 import cv2
 import numpy as np
 import onnxruntime as ort
-from fastapi import FastAPI, File, UploadFile, HTTPException, status
+from fastapi import FastAPI, File, Request, UploadFile, HTTPException, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # Initialize FastAPI with OpenAPI metadata for Swagger UI
 app = FastAPI(
@@ -35,6 +38,41 @@ FACE_PAD_RATIO = float(os.getenv("FACE_PAD_RATIO", "0.25"))   # padding around f
 ATTRIB_THRESHOLD = float(os.getenv("ATTRIB_THRESHOLD", "0.5"))  # FaceAttribNet per-head probability gate
 EYE_CLOSED_THRESHOLD = float(os.getenv("EYE_CLOSED_THRESHOLD", "0.5"))  # mean(left_eye_open, right_eye_open) floor
 MINIFAS_SCALE = float(os.getenv("MINIFAS_SCALE", "2.7"))  # MiniFASNetV2 crop expand factor
+
+
+def _max_queued_requests() -> int:
+    try:
+        value = int(os.getenv("MAX_QUEUED_REQUESTS", "10"))
+    except ValueError:
+        return 10
+    return value if value > 0 else 10
+
+
+MAX_QUEUED_REQUESTS = _max_queued_requests()  # max in-flight POST /api/v1/verify per process
+_verify_semaphore = asyncio.Semaphore(MAX_QUEUED_REQUESTS)
+
+
+class VerifyConcurrencyLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method != "POST" or request.url.path != "/api/v1/verify":
+            return await call_next(request)
+        # Non-blocking acquire: wait_for(acquire(), timeout=0) always times out
+        # (verified on 3.12: ensure_future needs a loop tick), so guard with
+        # locked() instead. No await between check and acquire, so no race.
+        if _verify_semaphore.locked():
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Server busy: too many queued verification requests, retry shortly"},
+                headers={"Retry-After": "1"},
+            )
+        await _verify_semaphore.acquire()
+        try:
+            return await call_next(request)
+        finally:
+            _verify_semaphore.release()
+
+
+app.add_middleware(VerifyConcurrencyLimitMiddleware)
 
 # Standard 112x112 canonical reference landmarks for similarity warping
 REFERENCE_FACIAL_POINTS = np.array([
@@ -344,7 +382,18 @@ async def health_check():
     response_model=VerificationResponse,
     status_code=status.HTTP_200_OK,
     summary="1:1 Verification via SCRFD 10G & EdgeFace Base",
-    tags=["Biometric Engine"]
+    tags=["Biometric Engine"],
+    responses={
+        429: {
+            "description": "Too Many Requests — verify concurrency limit exceeded; retry after 1s",
+            "headers": {"Retry-After": {"schema": {"type": "string"}}},
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Server busy: too many queued verification requests, retry shortly"}
+                }
+            },
+        }
+    },
 )
 async def verify_identity(
     target_image: UploadFile = File(..., description="Live camera frame"),

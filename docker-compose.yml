@@ -28,6 +28,8 @@ services:
       - ATTRIB_THRESHOLD=${ATTRIB_THRESHOLD:-0.6}
       - EYE_CLOSED_THRESHOLD=${EYE_CLOSED_THRESHOLD:-0.6}
       - MINIFAS_SCALE=${MINIFAS_SCALE:-2.7}
+      # In-memory concurrency gate: max in-flight POST /api/v1/verify per worker
+      - MAX_QUEUED_REQUESTS=${MAX_QUEUED_REQUESTS:-10}
     deploy:
       resources:
         limits:
