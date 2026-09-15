@@ -1,0 +1,6 @@
+push.sh
+clear.sh
+run.sh
+models/*.onnx
+__pycache__/
+*.py[cod]
