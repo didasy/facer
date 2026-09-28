@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Download ONNX weights (yakhyo builds) into this directory.
-# Filenames match app/main.py: det_10g.onnx, edgeface_base.onnx, minifasnetv2.onnx, face_attrib_net.onnx.
+# Filenames match app/main.py: retinaface_r34.onnx, edgeface_base.onnx, minifasnetv2.onnx, face_attrib_net.onnx.
 # Skips files already present; pass --force to re-download.
 set -euo pipefail
 
@@ -20,7 +20,7 @@ dl() {
 
 cd "$(dirname "$0")"
 
-dl "https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_10g.onnx" "det_10g.onnx"
+dl "https://github.com/yakhyo/retinaface-pytorch/releases/download/v0.0.1/retinaface_r34.onnx" "retinaface_r34.onnx"
 dl "https://github.com/yakhyo/edgeface-onnx/releases/download/weights/edgeface_base.onnx" "edgeface_base.onnx"
 # Upstream asset is MiniFASNetV2.onnx; renamed to match MINIFAS_PATH in app/main.py
 dl "https://github.com/yakhyo/face-anti-spoofing/releases/download/weights/MiniFASNetV2.onnx" "minifasnetv2.onnx"
@@ -38,3 +38,8 @@ if command -v sha256sum >/dev/null 2>&1; then
 fi
 
 ls -la ./*.onnx
+
+# Cleanup hint: detector weight from earlier versions is no longer used.
+if [[ -f "det_10g.onnx" ]]; then
+  echo "note: stale det_10g.onnx present (unused since RetinaFace-R34 swap); delete it to save ~17 MB: rm det_10g.onnx"
+fi

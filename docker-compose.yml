@@ -19,7 +19,7 @@ services:
       - BLUR_THRESHOLD=${BLUR_THRESHOLD:-25.0}
       - BLUR_SCORE_MAX=${BLUR_SCORE_MAX:-250.0}
       - FACE_PAD_RATIO=${FACE_PAD_RATIO:-0.25}
-      # SCRFD-10G detection
+      # RetinaFace-R34 detection (max-side cap)
       - DET_THRESHOLD=${DET_THRESHOLD:-0.5}
       - DET_INPUT_SIZE=${DET_INPUT_SIZE:-640}
       # EdgeFace verification
@@ -33,10 +33,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: '4.0'
           memory: 2048M
         reservations:
-          cpus: '0.5'
+          cpus: '1.5'
           memory: 512M
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]

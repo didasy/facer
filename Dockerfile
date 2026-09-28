@@ -25,6 +25,11 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --default-timeout=100 --retries 10 -r requirements.txt
 
+# Install the library without bundling model weights
+COPY pyproject.toml README.md LICENSE THIRD_PARTY_NOTICES.md ./
+COPY ./src ./src
+RUN pip install --no-cache-dir --no-deps .
+
 # Copy application code
 COPY ./app ./app
 

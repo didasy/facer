@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "facer"
+version = "2.1.0"
+description = "CPU face verification with RetinaFace, EdgeFace, FaceAttribNet, and MiniFASNet"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+dependencies = [
+    "numpy>=1.26.0",
+    "opencv-python-headless>=4.9.0",
+    "onnxruntime>=1.17.0",
+]
+
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.6.0",
+    "python-multipart>=0.0.9",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/facer"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/facer",
+    "/app/main.py",
+    "/tests/*.py",
+    "/pyproject.toml",
+    "/README.md",
+    "/LICENSE",
+    "/THIRD_PARTY_NOTICES.md",
+    "/requirements.txt",
+    "/models/download.sh",
+    "/Dockerfile",
+]
+exclude = ["**/__pycache__", "**/*.pyc", "**/*.onnx"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+markers = ["integration: requires local ONNX weights and benchmark photos"]

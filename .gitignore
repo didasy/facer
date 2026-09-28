@@ -1,7 +1,13 @@
+.env
+.env.*
+!.env.example
 push.sh
 clear.sh
 run.sh
 models/*.onnx
 __pycache__/
 *.py[cod]
-benchmark
+benchmark/testdata/
+task_plan.md
+findings.md
+progress.md
